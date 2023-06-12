@@ -24,3 +24,4 @@ if __name__ == '__main__':
     cv2.imshow('img', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    cv2.imwrite(os.path.join('results', 'solidWhiteRight_result.jpg'), img)
