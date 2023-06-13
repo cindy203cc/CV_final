@@ -2,6 +2,7 @@ import cv2
 import os
 import numpy as np
 import copy
+import time
 
 def region_of_interest(img, vertices):
     mask = np.zeros_like(img)   
@@ -11,7 +12,7 @@ def region_of_interest(img, vertices):
 
 def get_vertices(image):
     rows, cols = image.shape[:2]
-    bottom_left  = [cols*0.15, rows]
+    bottom_left  = [cols*0.05, rows]
     top_left     = [cols*0.45, rows*0.6]
     bottom_right = [cols*0.95, rows]
     top_right    = [cols*0.55, rows*0.6] 
@@ -35,6 +36,7 @@ def draw_line(line,img):
     return img
 
 if __name__ == '__main__':
+    start_time = time.time()
     img = cv2.imread(os.path.join('datasets', 'solidWhiteRight.jpg'))
     img_copy = copy.deepcopy(img)
     grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -60,13 +62,12 @@ if __name__ == '__main__':
 
     img = draw_line(line_r,img)
     img = draw_line(line_l,img)
+    foreground = cv2.bitwise_and(img, img, mask=mask)
+    background = cv2.bitwise_and(img_copy, img_copy, mask=cv2.bitwise_not(mask))
+    img = cv2.bitwise_or(foreground, background)
 
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            if mask[i][j].all()==0:
-                img[i][j] = img_copy[i][j]
-
-    
+    end_time = time.time()
+    print('Spend {:.3f} second.'.format(end_time - start_time))
     cv2.imshow('img', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
