@@ -30,10 +30,10 @@ def draw_line(line,img):
     b = np.sin(theta)
     x0 = a * rho
     y0 = b * rho
-    x1 = int(x0 + 1000 * (-b))
-    y1 = int(y0 + 1000 * a)
-    x2 = int(x0 - 1000 * (-b))
-    y2 = int(y0 - 1000 * a)
+    x1 = int(x0 + 2000 * (-b))
+    y1 = int(y0 + 2000 * a)
+    x2 = int(x0 - 2000 * (-b))
+    y2 = int(y0 - 2000 * a)
     cv2.line(img, (x1, y1), (x2, y2), (0,0,255), 2)
     return img
 
@@ -65,10 +65,11 @@ if __name__ == '__main__':
             rho = line[0][0]
             theta = line[0][1]
 
-            if theta < np.pi/2.0:
+            if theta < np.pi/2.0 - 0.1:
                 right_line.append((rho,theta))
-            else:
+            elif theta > np.pi/2.0 + 0.1:
                 left_line.append((rho,theta))
+                
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
             try:
@@ -76,7 +77,7 @@ if __name__ == '__main__':
                 line_l = np.mean(left_line, axis=0)
             except RuntimeWarning:
                 pass
-            
+
         if line_r.any() != np.nan:
             img = draw_line(line_r,img)
         if line_l.any() != np.nan:

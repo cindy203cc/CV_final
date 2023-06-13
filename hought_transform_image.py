@@ -28,16 +28,16 @@ def draw_line(line,img):
     b = np.sin(theta)
     x0 = a * rho
     y0 = b * rho
-    x1 = int(x0 + 1000 * (-b))
-    y1 = int(y0 + 1000 * a)
-    x2 = int(x0 - 1000 * (-b))
-    y2 = int(y0 - 1000 * a)
+    x1 = int(x0 + 2000 * (-b))
+    y1 = int(y0 + 2000 * a)
+    x2 = int(x0 - 2000 * (-b))
+    y2 = int(y0 - 2000 * a)
     cv2.line(img, (x1, y1), (x2, y2), (0,0,255), 2)
     return img
 
 if __name__ == '__main__':
     start_time = time.time()
-    img = cv2.imread(os.path.join('datasets', 'solidWhiteRight.jpg'))
+    img = cv2.imread(os.path.join('datasets', 'yellowCurve.jpg'))
     img_copy = copy.deepcopy(img)
     grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(grayscale_img, 100, 200)
@@ -52,9 +52,9 @@ if __name__ == '__main__':
         theta = line[0][1]
         #print(line)
         #draw_line(line[0],img)
-        if theta < np.pi/2.0:
+        if theta < np.pi/2.0 - 0.1:
             right_line.append((rho,theta))
-        else:
+        elif theta > np.pi/2.0 + 0.1:
             left_line.append((rho,theta))
 
     line_r = np.mean(right_line, axis=0)
@@ -62,6 +62,7 @@ if __name__ == '__main__':
 
     img = draw_line(line_r,img)
     img = draw_line(line_l,img)
+
     foreground = cv2.bitwise_and(img, img, mask=mask)
     background = cv2.bitwise_and(img_copy, img_copy, mask=cv2.bitwise_not(mask))
     img = cv2.bitwise_or(foreground, background)
@@ -71,4 +72,4 @@ if __name__ == '__main__':
     cv2.imshow('img', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    cv2.imwrite(os.path.join('results', 'solidWhiteRight_result.jpg'), img)
+    cv2.imwrite(os.path.join('results', 'yellowCurve.jpg'), img)
