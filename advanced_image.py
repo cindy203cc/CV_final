@@ -201,13 +201,10 @@ if __name__ == '__main__':
     cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=8)
 
     line_img = unoverhead(720,1280,line_img)
-    start = time.time()
     foreground = np.zeros((img_copy.shape), np.uint8)
     foreground[:, :, 2] = line_img
     background = cv2.bitwise_and(img_copy, img_copy, mask=cv2.bitwise_not(line_img))
     img = cv2.bitwise_or(foreground, background)
-    end = time.time()
-    print(end - start)
 
     # 用來看找線上白色點的線是在哪
     '''
