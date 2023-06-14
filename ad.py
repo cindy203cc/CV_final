@@ -5,7 +5,7 @@
 3. 轉鳥瞰 fin
 4. 轉黑白 fin
 5. 找左右兩邊的白色點  fin (看起來沒問題拉應該，不過如果找不到第一個高度上的點的畫高機率全都找不到，然後都是迴圈效率很差但我不知道怎麼矩陣化)
-6. 用5的點(如果一邊有3個點以上)建構 y = ax^2+bx+c 的matrix去解並得到曲線
+6. 用5的點(如果一邊有3個點以上)建構 y = ax^2+bx+c 的matrix去解並得到曲線 fin
 7. 把線畫上去然後轉回飛鳥瞰的視角然後把線貼上元照片
 '''
 import cv2
@@ -27,6 +27,14 @@ def overhead(transform_h,transform_w,img):
 
     return overhead_img
 
+def unoverhead(transform_h,transform_w,img):
+    source = np.float32(get_vertices(img))
+    destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
+    overhead_transform = cv2.getPerspectiveTransform(destination,source)
+    overhead_img = cv2.warpPerspective(img, overhead_transform, dsize=(transform_w, transform_h),flags=cv2.INTER_LINEAR)
+
+    return overhead_img
+
 # 轉黑白二極影像
 def binary(img):
     sort = np.sort(overhead_img.flatten())
@@ -40,7 +48,7 @@ def binary(img):
 # 用類似window的方式找白色(白色等於在Lane上) (我懶只找了window中間線上的點)
 def find_line_points(img):
     win_h = int(img.shape[0]/10) # window高度
-    win_w = 100 # window寬度
+    win_w = 200 # window寬度
     half_range = int(win_w/2)
 
     flag_left = 0 # flag == 0 :還沒找到白色 ; flag == 1 找到第一個白色 ; flag == 2 找到最後一個白色並算出中間點
@@ -127,18 +135,46 @@ def find_line_points(img):
 
     return left_points,right_points
 
+<<<<<<< HEAD:ad.py
+=======
+def func(x, a, b, c):
+    return a * x**2 + b * x + c
+
+def fit_curve(points):
+    xdata = []
+    ydata = []
+    flag = 0
+    last_1 = [0,0]
+    last_2 = [0,0]
+    for i in range(9):
+        if points[i] != 0:
+            xdata.append(points[i])
+            ydata.append(720 - int(720 * (i+1) / 10))
+            if flag == 0:
+                last_1 = [720 - int(720 * (i+1) / 10),points[i]]
+                flag = 1
+            else:
+                last_2 = last_1
+                last_1 = [720 - int(720 * (i+1) / 10),points[i]]
+                flag = 2
+    # fake point
+    if flag == 2:
+        fake_x = int((last_1[0]*last_2[1] - last_2[0]*last_1[1])/(last_1[0] - last_2[0]))
+        xdata.append(fake_x)
+        ydata.append(0)
+
+    print(xdata)
+    print(ydata)
+    print()
+
+    popt, _ = curve_fit(func, xdata, ydata)
+    # popt = np.polyfit(xdata, ydata, 2)
+    #  bounds=([-8e-3, -np.inf, -np.inf], [8e-3, np.inf, np.inf])
+    return popt,xdata
+
+>>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
 if __name__ == '__main__':
-    '''
-    流程:
-    1. 高斯模糊 fin
-    2. 轉灰階 fin
-    3. 轉鳥瞰 fin
-    4. 轉黑白 fin
-    5. 找左右兩邊的白色點  fin (看起來沒問題拉應該，不過如果找不到第一個高度上的點的畫高機率全都找不到，然後都是迴圈效率很差但我不知道怎麼矩陣化)
-    6. 用5的點(如果一邊有3個點以上)建構 y = ax^2+bx+c 的matrix去解並得到曲線
-    7. 把線畫上去然後轉回飛鳥瞰的視角然後把線貼上元照片
-    '''
-    img = cv2.imread(os.path.join('datasets', 'test_3.jpg'))
+    img = cv2.imread(os.path.join('datasets', 'test3.jpg'))
     img_copy = copy.deepcopy(img)
     img = cv2.GaussianBlur(img, (5,5), 0)
     grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -146,9 +182,38 @@ if __name__ == '__main__':
     overhead_img = overhead(720,1280,grayscale_img)
     binary_img = binary(overhead_img)
 
+    line_img = np.zeros((720,1280))
+
     left_points,right_points = find_line_points(binary_img)
+<<<<<<< HEAD:ad.py
     print(left_points)
     print(right_points)
+=======
+    left_popt,xdata = fit_curve(left_points)
+    xlimit = 0
+    if len(xdata) >= 3:
+        xlimit = xdata[len(xdata)-2]
+    else:xlimit = xdata[len(xdata)-1]
+    left_x = np.linspace(0, xlimit, 100)
+    left_y = func(left_x, *left_popt)
+    cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=128, thickness=3)
+
+    right_popt,xdata = fit_curve(right_points)
+    if len(xdata) >= 3:
+        xlimit = xdata[len(xdata)-2]
+    else:xlimit = xdata[len(xdata)-1]
+    right_x = np.linspace(640, xlimit, 100)
+    right_y = func(right_x, *right_popt)
+    cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=128, thickness=3)
+
+    line_img = unoverhead(720,1280,line_img)
+    for i in range(720):
+        for j in range(1280):
+            if line_img[i,j] != 0:
+                img[i,j][0] = 0
+                img[i,j][1] = 0
+                img[i,j][2] = 255
+>>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
 
     # 用來看找線上白色點的線是在哪
     '''
@@ -156,9 +221,21 @@ if __name__ == '__main__':
         for i in range(1280):
             binary_img[720-72-72*j,i] = 255
     binary_img[500,1013] = 255
+<<<<<<< HEAD:ad.py
     '''
     
     cv2.imshow('img', binary_img)
+=======
+
+    for i in range(9):
+        y = 720 - int(720 * (i+1) / 10)
+        cv2.circle(binary_img, (left_points[i], y), 5, 128, -1)
+        cv2.circle(binary_img, (right_points[i], y), 5, 128, -1)
+    '''
+    
+
+    cv2.imshow('img',img)
+>>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     cv2.imwrite(os.path.join('results', 'solidWhiteRight_result.jpg'), img)
