@@ -12,6 +12,7 @@ import cv2
 import os
 import numpy as np
 import copy
+from scipy.optimize import curve_fit
 
 # 回傳要轉的四個角落，改了會炸
 def get_vertices(image):
@@ -126,6 +127,20 @@ def find_line_points(img):
 
     return left_points,right_points
 
+def func(x, a, b, c):
+    return a * x**2 + b * x + c
+
+def fit_curve(points):
+    xdata = []
+    ydata = []
+    for i in range(9):
+        if points[i] != 0:
+            xdata.append(points[i])
+            ydata.append(720 - int(720 * (i+1) / 10))
+    popt, _ = curve_fit(func, xdata, ydata)
+    # bounds=([-np.inf, -np.inf, -np.inf], [np.inf, np.inf, np.inf])
+    return popt
+
 if __name__ == '__main__':
     '''
     流程:
@@ -146,6 +161,10 @@ if __name__ == '__main__':
     binary_img = binary(overhead_img)
 
     left_points,right_points = find_line_points(binary_img)
+    left_popt = fit_curve(left_points)
+    x = np.linspace(0, 640, 100)
+    y = func(x, *left_popt)
+    cv2.polylines(binary_img, pts=[np.array([*zip(x, y)], np.int32)], isClosed=False, color=128, thickness=3)
     print(left_points)
     print(right_points)
 
@@ -154,7 +173,12 @@ if __name__ == '__main__':
         for i in range(1280):
             binary_img[720-72-72*j,i] = 255
     binary_img[500,1013] = 255
-    
+
+    for i in range(9):
+        y = 720 - int(720 * (i+1) / 10)
+        cv2.circle(binary_img, (left_points[i], y), 5, 128, -1)
+        cv2.circle(binary_img, (right_points[i], y), 5, 128, -1)
+
     cv2.imshow('img', binary_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
