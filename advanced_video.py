@@ -163,7 +163,11 @@ def fit_curve(points):
         fake_x = int((last_1[0]*last_2[1] - last_2[0]*last_1[1])/(last_1[0] - last_2[0]))
         xdata.append(fake_x)
         ydata.append(0)
-
+        delta_x = xdata[0] - xdata[1]
+        delta_y = ydata[0] - ydata[1]
+        fake_x = int((800 - ydata[0]) * (delta_x / delta_y) + xdata[0])
+        xdata.insert(0, fake_x)
+        ydata.insert(0, 800 - 1)
         popt, _ = curve_fit(func, xdata, ydata)
         return popt,xdata
     else:
