@@ -162,9 +162,9 @@ def fit_curve(points):
         xdata.append(fake_x)
         ydata.append(0)
 
-    # print(xdata)
-    # print(ydata)
-    # print()
+    print(xdata)
+    print(ydata)
+    print()
 
     popt, _ = curve_fit(func, xdata, ydata)
     # popt = np.polyfit(xdata, ydata, 2)
@@ -172,34 +172,43 @@ def fit_curve(points):
     return popt,xdata
 
 if __name__ == '__main__':
-    img = cv2.imread(os.path.join('datasets', 'test_3.jpg'))
+    img = cv2.imread(os.path.join('datasets', 'solidWhiteRight.jpg'))
+    img_h, img_w, _ = img.shape
+    img = cv2.resize(img, (1280, 720))
     img_copy = copy.deepcopy(img)
     img = cv2.GaussianBlur(img, (5,5), 0)
     grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     overhead_img = overhead(720,1280,grayscale_img)
     binary_img = binary(overhead_img)
-
     line_img = np.zeros((720,1280), np.uint8)
 
     left_points,right_points = find_line_points(binary_img)
     left_popt,xdata = fit_curve(left_points)
     xlimit = 0
+    xmin = 0
     if len(xdata) >= 3:
-        xlimit = xdata[len(xdata)-2]
-    else:xlimit = xdata[len(xdata)-1]
-    left_x = np.linspace(0, xlimit, 100)
+        xlimit = np.max(xdata)
+        xmin = np.min(xdata)
+    else:xlimit = np.max(xdata)
+    left_x = np.linspace(xmin, xlimit, 100)
+    left_x = np.linspace(0, xlimit, 5)
     left_y = func(left_x, *left_popt)
     cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=255, thickness=8)
 
     right_popt,xdata = fit_curve(right_points)
+    xlimit = 0
+    xmin = 640
     if len(xdata) >= 3:
-        xlimit = xdata[len(xdata)-2]
-    else:xlimit = xdata[len(xdata)-1]
-    right_x = np.linspace(640, xlimit, 100)
+        xlimit = np.max(xdata)
+        xmin = np.min(xdata)
+    else:xlimit = np.max(xdata)
+    right_x = np.linspace(xmin, xlimit, 100)
     right_y = func(right_x, *right_popt)
     cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=8)
-
+    cv2.imshow('img', line_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     line_img = unoverhead(720,1280,line_img)
     foreground = np.zeros((img_copy.shape), np.uint8)
     foreground[:, :, 2] = line_img
@@ -207,7 +216,7 @@ if __name__ == '__main__':
     img = cv2.bitwise_or(foreground, background)
 
     # 用來看找線上白色點的線是在哪
-    '''
+    
     for j in range(9):
         for i in range(1280):
             binary_img[720-72-72*j,i] = 255
@@ -217,9 +226,9 @@ if __name__ == '__main__':
         y = 720 - int(720 * (i+1) / 10)
         cv2.circle(binary_img, (left_points[i], y), 5, 128, -1)
         cv2.circle(binary_img, (right_points[i], y), 5, 128, -1)
-    '''
-
-    cv2.imshow('img',img)
+    
+    img = cv2.resize(img, (img_w, img_h))
+    cv2.imshow('img',binary_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    cv2.imwrite(os.path.join('results', 'test3_result.jpg'), img)
+    cv2.imwrite(os.path.join('results', 'solidWhiteRight.jpg'), img)
