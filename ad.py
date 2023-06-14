@@ -21,6 +21,7 @@ def get_vertices(image):
 def overhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
+
     overhead_transform = cv2.getPerspectiveTransform(source, destination)
     overhead_img = cv2.warpPerspective(img, overhead_transform, dsize=(transform_w, transform_h),flags=cv2.INTER_LINEAR)
 
@@ -39,7 +40,7 @@ def binary(img):
 # 用類似window的方式找白色(白色等於在Lane上) (我懶只找了window中間線上的點)
 def find_line_points(img):
     win_h = int(img.shape[0]/10) # window高度
-    win_w = 200 # window寬度
+    win_w = 100 # window寬度
     half_range = int(win_w/2)
 
     flag_left = 0 # flag == 0 :還沒找到白色 ; flag == 1 找到第一個白色 ; flag == 2 找到最後一個白色並算出中間點
@@ -150,10 +151,12 @@ if __name__ == '__main__':
     print(right_points)
 
     # 用來看找線上白色點的線是在哪
+    '''
     for j in range(9):
         for i in range(1280):
             binary_img[720-72-72*j,i] = 255
     binary_img[500,1013] = 255
+    '''
     
     cv2.imshow('img', binary_img)
     cv2.waitKey(0)
