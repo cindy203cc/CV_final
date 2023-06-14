@@ -193,7 +193,6 @@ if __name__ == '__main__':
         xlimit = np.max(xdata)
         xmin = np.min(xdata)
     else:xlimit = np.max(xdata)
-    print(xlimit,xmin )
     left_x = np.linspace(xmin, xlimit, 100)
     left_y = func(left_x, *left_popt)
     cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=255, thickness=8)
@@ -208,9 +207,6 @@ if __name__ == '__main__':
     right_x = np.linspace(xmin, xlimit, 100)
     right_y = func(right_x, *right_popt)
     cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=8)
-    cv2.imshow('img', line_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
     line_img = unoverhead(720,1280,line_img)
     foreground = np.zeros((img_copy.shape), np.uint8)
     foreground[:, :, 2] = line_img
