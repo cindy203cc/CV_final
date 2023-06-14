@@ -12,6 +12,10 @@ import cv2
 import os
 import numpy as np
 import copy
+from scipy.optimize import curve_fit
+import time
+import warnings
+from tqdm import tqdm
 
 # 回傳要轉的四個角落，改了會炸
 def get_vertices(image):
@@ -21,7 +25,6 @@ def get_vertices(image):
 def overhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
-
     overhead_transform = cv2.getPerspectiveTransform(source, destination)
     overhead_img = cv2.warpPerspective(img, overhead_transform, dsize=(transform_w, transform_h),flags=cv2.INTER_LINEAR)
 
@@ -37,11 +40,11 @@ def unoverhead(transform_h,transform_w,img):
 
 # 轉黑白二極影像
 def binary(img):
-    sort = np.sort(overhead_img.flatten())
+    sort = np.sort(img.flatten())
     mid = sort[[int(720*1280*0.5)]]
     top = sort[[int(720*1280*0.9)]]
     thres = int(mid+top/2)
-    binary_img = cv2.threshold(overhead_img,thres,255,cv2.THRESH_BINARY)[1]
+    binary_img = cv2.threshold(img,thres,255,cv2.THRESH_BINARY)[1]
 
     return binary_img
 
@@ -117,6 +120,8 @@ def find_line_points(img):
                 flag_right = 2
                 right_2 = j
 
+            if right_mid > 1280 - half_range - 5:right_mid = 1280 - half_range - 5
+
         if flag_left == 2:
             left_mid = left_mid - half_range + left_1 + int((left_2-left_1)/2)
             left_points.append(left_mid)
@@ -131,12 +136,8 @@ def find_line_points(img):
         flag_left = 0
         flag_right = 0
 
-        if right_mid > 1280 - 51:right_mid = 1280 - 51
-
     return left_points,right_points
 
-<<<<<<< HEAD:ad.py
-=======
 def func(x, a, b, c):
     return a * x**2 + b * x + c
 
@@ -163,18 +164,37 @@ def fit_curve(points):
         xdata.append(fake_x)
         ydata.append(0)
 
-    print(xdata)
-    print(ydata)
-    print()
+        popt, _ = curve_fit(func, xdata, ydata)
+        return popt,xdata
+    else:
+        return 0,[]
 
-    popt, _ = curve_fit(func, xdata, ydata)
-    # popt = np.polyfit(xdata, ydata, 2)
-    #  bounds=([-8e-3, -np.inf, -np.inf], [8e-3, np.inf, np.inf])
-    return popt,xdata
+def generate_line_image(binary_img):
+    line_img = np.zeros((720,1280), np.uint8)
 
->>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
-if __name__ == '__main__':
-    img = cv2.imread(os.path.join('datasets', 'test3.jpg'))
+    left_points,right_points = find_line_points(binary_img)
+    left_popt,xdata = fit_curve(left_points)
+    xlimit = 0
+    xmin = 0
+    if len(xdata) >= 3:
+        xlimit = np.max(xdata)
+        xmin = np.min(xdata)
+        left_x = np.linspace(xmin, xlimit, 100)
+        left_y = func(left_x, *left_popt)
+        cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=255, thickness=15)
+
+    right_popt,xdata = fit_curve(right_points)
+    if len(xdata) >= 3:
+        xlimit = np.max(xdata)
+        xmin = np.min(xdata)
+        right_x = np.linspace(xmin, xlimit, 100)
+        right_y = func(right_x, *right_popt)
+        cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=15)
+
+    return line_img
+
+def draw_line(img):
+    img = cv2.resize(img,(1280,720), interpolation=cv2.INTER_AREA)
     img_copy = copy.deepcopy(img)
     img = cv2.GaussianBlur(img, (5,5), 0)
     grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -182,60 +202,42 @@ if __name__ == '__main__':
     overhead_img = overhead(720,1280,grayscale_img)
     binary_img = binary(overhead_img)
 
-    line_img = np.zeros((720,1280))
-
-    left_points,right_points = find_line_points(binary_img)
-<<<<<<< HEAD:ad.py
-    print(left_points)
-    print(right_points)
-=======
-    left_popt,xdata = fit_curve(left_points)
-    xlimit = 0
-    if len(xdata) >= 3:
-        xlimit = xdata[len(xdata)-2]
-    else:xlimit = xdata[len(xdata)-1]
-    left_x = np.linspace(0, xlimit, 100)
-    left_y = func(left_x, *left_popt)
-    cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=128, thickness=3)
-
-    right_popt,xdata = fit_curve(right_points)
-    if len(xdata) >= 3:
-        xlimit = xdata[len(xdata)-2]
-    else:xlimit = xdata[len(xdata)-1]
-    right_x = np.linspace(640, xlimit, 100)
-    right_y = func(right_x, *right_popt)
-    cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=128, thickness=3)
+    line_img = generate_line_image(binary_img)
 
     line_img = unoverhead(720,1280,line_img)
-    for i in range(720):
-        for j in range(1280):
-            if line_img[i,j] != 0:
-                img[i,j][0] = 0
-                img[i,j][1] = 0
-                img[i,j][2] = 255
->>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
+    foreground = np.zeros((img_copy.shape), np.uint8)
+    foreground[:, :, 2] = line_img
+    background = cv2.bitwise_and(img_copy, img_copy, mask=cv2.bitwise_not(line_img))
+    img = cv2.bitwise_or(foreground, background)
 
-    # 用來看找線上白色點的線是在哪
-    '''
-    for j in range(9):
-        for i in range(1280):
-            binary_img[720-72-72*j,i] = 255
-    binary_img[500,1013] = 255
-<<<<<<< HEAD:ad.py
-    '''
+    #cv2.imshow('img',img)
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    #cv2.imwrite(os.path.join('results', 'solidWhiteRight_result.jpg'), img)
+
+    return img
+
+if __name__ == '__main__':
+    #img = cv2.imread(os.path.join('datasets', 'solidWhiteRight.jpg'))
+    #draw_line(img)
+    cap = cv2.VideoCapture(os.path.join('datasets', 'project_video.mp4'))
+    video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+    out = cv2.VideoWriter(os.path.join('results', 'project_video_result.mp4'), fourcc, fps, (w, h))
     
-    cv2.imshow('img', binary_img)
-=======
+    start_time = time.time()
+    for i in tqdm(range(video_length)):
+        if cap.isOpened():
+            ret, img = cap.read()
+        if not ret:
+            break
+        img = draw_line(img)
+        out.write(img)
 
-    for i in range(9):
-        y = 720 - int(720 * (i+1) / 10)
-        cv2.circle(binary_img, (left_points[i], y), 5, 128, -1)
-        cv2.circle(binary_img, (right_points[i], y), 5, 128, -1)
-    '''
-    
-
-    cv2.imshow('img',img)
->>>>>>> 537a34e1c8268e8f7b84900dbf91118f084b37d6:advanced_test.py
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    cv2.imwrite(os.path.join('results', 'solidWhiteRight_result.jpg'), img)
+    end_time = time.time()
+    print('Spend {:.3f} second.'.format(end_time - start_time))
+    cap.release()
+    out.release()
