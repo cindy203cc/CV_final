@@ -15,19 +15,27 @@ import copy
 from scipy.optimize import curve_fit
 import time
 
-# 回傳要轉的四個角落，改了會炸
+'''
+return the vertices of ROI
+'''
 def get_vertices(image):
     return np.float32([[200, 720],[1100, 720],[595, 450],[685, 450]])
 
-# 轉成鳥瞰視角
+'''
+Warp into overhead perspective
+'''
 def overhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
+    img.plot
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
     overhead_transform = cv2.getPerspectiveTransform(source, destination)
     overhead_img = cv2.warpPerspective(img, overhead_transform, dsize=(transform_w, transform_h),flags=cv2.INTER_LINEAR)
 
     return overhead_img
 
+'''
+Unwarped the image from overhead to original perspective
+'''
 def unoverhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
@@ -36,7 +44,9 @@ def unoverhead(transform_h,transform_w,img):
 
     return overhead_img
 
-# 轉黑白二極影像
+'''
+binarize the image to black and white to separate the lane from road
+'''
 def binary(img):
     sort = np.sort(overhead_img.flatten())
     mid = sort[[int(720*1280*0.5)]]
@@ -46,7 +56,7 @@ def binary(img):
 
     return binary_img
 
-# 用類似window的方式找白色(白色等於在Lane上) (我懶只找了window中間線上的點)
+# 用類似window的方式找白色(白色等於在Lane上)
 def find_line_points(img):
     win_h = int(img.shape[0]/10) # window高度
     win_w = 200 # window寬度
@@ -136,9 +146,15 @@ def find_line_points(img):
 
     return left_points,right_points
 
+'''
+the formula of the curve
+'''
 def func(x, a, b, c):
     return a * x**2 + b * x + c
 
+'''
+find the parameters of the curve of given edge points
+'''
 def fit_curve(points):
     xdata = []
     ydata = []
@@ -174,7 +190,7 @@ def fit_curve(points):
 
 if __name__ == '__main__':
     start_time = time.time()
-    img = cv2.imread(os.path.join('datasets', 'solidWhiteRight.jpg'))
+    img = cv2.imread(os.path.join('datasets', 'test_3.jpg'))
     img_h, img_w, _ = img.shape
     img = cv2.resize(img, (1280, 720))
     img_copy = copy.deepcopy(img)
@@ -195,7 +211,7 @@ if __name__ == '__main__':
     else:xlimit = np.max(xdata)
     left_x = np.linspace(xmin, xlimit, 100)
     left_y = func(left_x, *left_popt)
-    cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=255, thickness=8)
+    cv2.polylines(line_img, pts=[np.array([*zip(left_x, left_y)], np.int32)], isClosed=False, color=255, thickness=15)
 
     right_popt,xdata = fit_curve(right_points)
     xlimit = 0
@@ -206,7 +222,7 @@ if __name__ == '__main__':
     else:xlimit = np.max(xdata)
     right_x = np.linspace(xmin, xlimit, 100)
     right_y = func(right_x, *right_popt)
-    cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=8)
+    cv2.polylines(line_img, pts=[np.array([*zip(right_x, right_y)], np.int32)], isClosed=False, color=255, thickness=15)
     line_img = unoverhead(720,1280,line_img)
     foreground = np.zeros((img_copy.shape), np.uint8)
     foreground[:, :, 2] = line_img
@@ -231,4 +247,4 @@ if __name__ == '__main__':
     cv2.imshow('img',img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    cv2.imwrite(os.path.join('results', 'solidWhiteRight.jpg'), img)
+    cv2.imwrite(os.path.join('results', 'test_3.jpg'), img)

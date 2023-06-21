@@ -4,12 +4,18 @@ import numpy as np
 import copy
 import time
 
+'''
+crop the ROI region from the image
+'''
 def region_of_interest(img, vertices):
     mask = np.zeros_like(img)   
     cv2.fillPoly(mask, vertices, [255,255,255])
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image,mask
 
+'''
+the vertices of ROI region
+'''
 def get_vertices(image):
     rows, cols = image.shape[:2]
     bottom_left  = [cols*0.05, rows]

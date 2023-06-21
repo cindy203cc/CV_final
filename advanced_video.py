@@ -17,7 +17,9 @@ import time
 import warnings
 from tqdm import tqdm
 
-# 回傳要轉的四個角落，改了會炸
+'''
+return the vertices of ROI
+'''
 def get_vertices(image):
     return np.float32([[200, 720],[1100, 720],[595, 450],[685, 450]])
 
@@ -30,6 +32,9 @@ def overhead(transform_h,transform_w,img):
 
     return overhead_img
 
+'''
+Unwarped the image from overhead to original perspective
+'''
 def unoverhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
@@ -38,7 +43,9 @@ def unoverhead(transform_h,transform_w,img):
 
     return overhead_img
 
-# 轉黑白二極影像
+'''
+binarize the image to black and white to separate the lane from road
+'''
 def binary(img):
     sort = np.sort(img.flatten())
     mid = sort[[int(720*1280*0.5)]]
@@ -48,7 +55,7 @@ def binary(img):
 
     return binary_img
 
-# 用類似window的方式找白色(白色等於在Lane上) (我懶只找了window中間線上的點)
+# 用類似window的方式找白色(白色等於在Lane上)
 def find_line_points(img):
     win_h = int(img.shape[0]/10) # window高度
     win_w = 200 # window寬度
@@ -138,9 +145,15 @@ def find_line_points(img):
 
     return left_points,right_points
 
+'''
+the formula of the curve
+'''
 def func(x, a, b, c):
     return a * x**2 + b * x + c
 
+'''
+find the parameters of the curve of given edge points
+'''
 def fit_curve(points):
     xdata = []
     ydata = []
@@ -173,6 +186,9 @@ def fit_curve(points):
     else:
         return 0,[]
 
+'''
+plot the lane line on the binary image
+'''
 def generate_line_image(binary_img):
     line_img = np.zeros((720,1280), np.uint8)
 
