@@ -26,7 +26,6 @@ Warp into overhead perspective
 '''
 def overhead(transform_h,transform_w,img):
     source = np.float32(get_vertices(img))
-    img.plot
     destination = np.float32([[300,720],[980,720],[300,0],[900,0]])
     overhead_transform = cv2.getPerspectiveTransform(source, destination)
     overhead_img = cv2.warpPerspective(img, overhead_transform, dsize=(transform_w, transform_h),flags=cv2.INTER_LINEAR)
